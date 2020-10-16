@@ -37,11 +37,11 @@ class Build {
       password: releaseConfig.password
     }
     // 本地打包地址
-    this.localeUrl = releaseConfig.buildUrl || './dist'
+    this.buildUrl = releaseConfig.buildUrl || './dist'
     // 远程前端文件地址
     this.serverUrl = releaseConfig.serverUrl
     if (!releaseConfig.serverUrl || !Object.keys(releaseConfig.serverUrl)) {
-      throw(new Error(red('没有在package.json找到远程服务地址！')))
+      throw(new Error(red('没有在package.json的release配置项中找到前端远程文件地址！')))
     }
   }
 
@@ -69,7 +69,7 @@ class Build {
         console.log(green('服务器前端文件夹清空完成！'))
       }
       console.log(green('开始上传服务器...'))
-      return this.client.uploadDir(this.localeUrl, this.serverUrl[envType])
+      return this.client.uploadDir(this.buildUrl, this.serverUrl[envType])
     })
     .then(() =>{
       console.log(green('服务器上传完成！'))
