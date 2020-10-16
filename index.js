@@ -1,4 +1,3 @@
-const os = require('os')
 const path = require('path')
 const sftp = require('ssh2-sftp-client')
 const { execSync } = require('child_process')
@@ -7,12 +6,16 @@ const { red, green } = require('ansi-colors')
 class Build {
   constructor() {
     const packageJson = require(path.join(process.cwd(), 'package.json'))
-    const releaseConfig = packageJson && packageJson.release
-    if (!releaseConfig) {
+    if (!(packageJson && packageJson.release)) {
       throw(new Error(red('没有在package.json找到release配置项！')))
     }
-    // 操作系统类型
-    this.systemType = os.type()
+    // 当前环境类型
+    const envType = Array.from(process.argv)[2]
+    // 当前环境配置
+    this.config = envType ? packageJson.release[envType] : packageJson.release
+    if (envType && !this.config) {
+      throw(new Error(red(`没有在release中找到${envType}！`)))
+    }
     // 命令执行参数
     this.execParams = {
       cwd: process.cwd(),
@@ -20,28 +23,31 @@ class Build {
       stdio: 'inherit'
     }
 
-    // windows操作系统打包命令
-    this.windowsOrder = (typeof releaseConfig.order === 'object' ? releaseConfig.order.windows : releaseConfig.order)
-      || 'node -max_old_space_size=4096 \"node_modules\\@angular\\cli\\bin\\umi\" build'
-    // linux或mac操作系统打包命令
-    this.maxOrLinuxOrder = (typeof releaseConfig.order === 'object' ? releaseConfig.order.maxOrLinux : releaseConfig.order)
-      || 'node --max_old_space_size=4096 ./node_modules/.bin/umi build'
+    // 打包命令
+    this.buildOrder = this.config.order
+      || `node -max_old_space_size=4096 "${path.join(process.cwd(), './node_modules/umi/bin/umi.js')}" build`
     
     // ftp服务
     this.client = new sftp()
     // 远程服务配置
     this.clientConfig = {
-      host: releaseConfig.host,
-      port: releaseConfig.port || '22',
-      username: releaseConfig.username,
-      password: releaseConfig.password
+      host: this.config.host,
+      port: this.config.port || '22',
+      username: this.config.username,
+      password: this.config.password || ''
+    }
+    if (!this.config.host) {
+      throw(new Error(red('没有在release配置项中找到host！')))
+    }
+    if (!this.config.username) {
+      throw(new Error(red('没有在release配置项中找到username！')))
     }
     // 本地打包地址
-    this.buildUrl = releaseConfig.buildUrl || './dist'
+    this.buildUrl = this.config.buildUrl || './dist'
     // 远程前端文件地址
-    this.serverUrl = releaseConfig.serverUrl
-    if (!releaseConfig.serverUrl || !Object.keys(releaseConfig.serverUrl)) {
-      throw(new Error(red('没有在package.json的release配置项中找到前端远程文件地址！')))
+    this.serverUrl = this.config.serverUrl
+    if (!this.config.serverUrl) {
+      throw(new Error(red('没有在release配置项中找到serverUrl！')))
     }
   }
 
@@ -49,17 +55,15 @@ class Build {
    * 连接远程服务器
    */
   connect() {
-    // 当前环境类型
-    const envType = Array.from(process.argv)[1]
     // 连接服务器
     this.client.connect(this.clientConfig)
     .then(() => {
-      return this.client.exists(this.serverUrl[envType])
+      return this.client.exists(this.serverUrl)
     })
     .then((exist) =>{
       if (exist) {
         console.log(green('清空服务器前端文件夹...'))
-        return this.client.rmdir(this.serverUrl[envType], true)
+        return this.client.rmdir(this.serverUrl, true)
       } else {
         return Promise.resolve(false)
       }
@@ -69,15 +73,15 @@ class Build {
         console.log(green('服务器前端文件夹清空完成！'))
       }
       console.log(green('开始上传服务器...'))
-      return this.client.uploadDir(this.buildUrl, this.serverUrl[envType])
+      return this.client.uploadDir(this.buildUrl, this.serverUrl)
     })
     .then(() =>{
       console.log(green('服务器上传完成！'))
       this.client.end()
     })
     .catch((err) => {
-      console.log(red(err))
       this.client.end()
+      throw(new Error(red(err)))
     })
   }
 
@@ -85,18 +89,19 @@ class Build {
    * 运行
    */
   start() {
-    console.log(green('安装模块包...'))
-    execSync('npm install', this.execParams)
-    console.log(green('安装完成！'))
-    console.log(green('开始打包...'))
-    if (this.systemType === 'Windows_NT') {
-      // windows系统
-      execSync(this.windowsOrder, this.execParams)
-    } else {
-      // linux或mac操作系统
-      execSync(this.maxOrLinuxOrder, this.execParams)
+    // 是否跳过安装模块包
+    if (!this.config.skipInstall) {
+      console.log(green('开始安装模块包...'))
+      execSync('npm install', this.execParams)
+      console.log(green('安装完成！'))
     }
-    console.log(green('打包完成！'))
+
+    // 是否跳过打包
+    if (!this.config.skipBuild) {
+      console.log(green('开始打包...'))
+      execSync(this.buildOrder, this.execParams)
+      console.log(green('打包完成！'))
+    }
     this.connect()
   }
 }
