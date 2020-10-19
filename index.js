@@ -1,5 +1,6 @@
 const path = require('path')
 const sftp = require('ssh2-sftp-client')
+const compressing = require('compressing')
 const { execSync } = require('child_process')
 const { red, green } = require('ansi-colors')
 
@@ -24,7 +25,7 @@ class Build {
     }
 
     // 打包命令
-    this.buildOrder = this.config.order
+    this.buildOrder = this.config.buildOrder
       || `node -max_old_space_size=4096 "${path.join(process.cwd(), './node_modules/umi/bin/umi.js')}" build`
     
     // ftp服务
@@ -49,10 +50,12 @@ class Build {
     if (!this.config.serverUrl) {
       throw(new Error(red('没有在release配置项中找到serverUrl！')))
     }
+    // 远程命令
+    this.serverOrder = this.config.serverOrder
   }
 
   /**
-   * 连接远程服务器
+   * 连接远程服务器-上传文件
    */
   connect() {
     // 连接服务器
@@ -86,6 +89,48 @@ class Build {
   }
 
   /**
+   * 连接远程服务器-执行命令
+   */
+  connectOrder() {
+    const localZipUrl = `${this.buildUrl}.zip`
+    const serverZipUrl = this.serverUrl + (localZipUrl.startsWith('.') ? localZipUrl.substr(1) : localZipUrl)
+    console.log(green('打包目录压缩中...'))
+    compressing.zip.compressDir(this.buildUrl, localZipUrl)
+    .then(() => {
+      console.log(green('打包目录压缩成功！'))
+      // 连接服务器
+      return this.client.connect(this.clientConfig)
+    })
+    .then(() =>{
+      console.log(green('开始上传服务器...'))
+      return this.client.fastPut(path.join(process.cwd(), localZipUrl), serverZipUrl)
+    })
+    .then(() =>{
+      console.log(green('服务器上传完成！'))
+      console.log(green('命令执行中...'))
+      return new Promise((resolve, reject) => {
+        this.client.client.exec(`cd ${this.serverUrl}\n${this.serverOrder}`, (err, stream) => {
+          if (err) reject(err)
+          stream.on('close', () => {
+            resolve(true)
+          }).on('data', () => {
+          }).stderr.on('data', (data) => {
+            reject(data)
+          })
+        })
+      })
+    })
+    .then(() => {
+      console.log(green('命令执行完成！'))
+      this.client.end()
+    })
+    .catch((err) => {
+      this.client.end()
+      throw(new Error(red(err)))
+    })
+  }
+
+  /**
    * 运行
    */
   start() {
@@ -102,7 +147,13 @@ class Build {
       execSync(this.buildOrder, this.execParams)
       console.log(green('打包完成！'))
     }
-    this.connect()
+
+    // 是否执行服务端命令
+    if (this.serverUrl && this.serverOrder) {
+      this.connectOrder()
+    } else {
+      this.connect()
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "front-end-release",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Front-end package release",
   "main": "index.js",
   "scripts": {
@@ -17,7 +17,8 @@
   "author": "phinney",
   "license": "ISC",
   "dependencies": {
-    "ssh2-sftp-client": "^5.3.1",
-    "ansi-colors": "^4.1.1"
+    "ansi-colors": "^4.1.1",
+    "compressing": "^1.5.1",
+    "ssh2-sftp-client": "^5.3.1"
   }
 }
