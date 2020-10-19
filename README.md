@@ -18,7 +18,7 @@ npm install front-end-release -g
   "buildOrder": "npm run build",                              // 打包命令
   "buildUrl": "./dist",                                       // 前端本地打包目录地址，默认'./dist'
   "serverUrl": "/home/dev",                                   // 服务器前端文件/脚本执行目录地址
-  "serverOrder": "sudo /home/dev/auto_deploy_front.sh",       // 服务器脚本执行，与serverUrl同时存在时，会先把打包目录打包成zip，上传到serverUrl并执行此命令
+  "serverOrder": "sh /home/dev/auto_deploy_front.sh",       // 服务器脚本执行，与serverUrl同时存在时，会先把打包目录打包成zip，上传到serverUrl并执行此命令
 },
 ```
 或者

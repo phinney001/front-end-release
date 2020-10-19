@@ -1,3 +1,4 @@
+const fs = require('fs')
 const path = require('path')
 const sftp = require('ssh2-sftp-client')
 const compressing = require('compressing')
@@ -122,6 +123,9 @@ class Build {
     })
     .then(() => {
       console.log(green('命令执行完成！'))
+      console.log(green('删除本地打包压缩文件...'))
+      fs.unlinkSync(`${this.buildUrl}.zip`)
+      console.log(green('本地打包压缩文件删除成功！'))
       this.client.end()
     })
     .catch((err) => {
