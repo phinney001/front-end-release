@@ -1,10 +1,11 @@
 {
   "name": "front-end-release",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Front-end package release",
   "main": "index.js",
   "scripts": {
-    "test": "node index"
+    "test": "node index",
+    "prepublish": "version update"
   },
   "repository": {
     "type": "git",
@@ -28,5 +29,8 @@
     "ansi-colors": "^4.1.1",
     "compressing": "^1.5.1",
     "ssh2-sftp-client": "^5.3.1"
+  },
+  "devDependencies": {
+    "package-version-update": "^1.0.3"
   }
 }
