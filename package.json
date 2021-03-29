@@ -6,16 +6,24 @@
   "scripts": {
     "test": "node index"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phinney001/front-end-release.git"
+  },
   "keywords": [
     "front-end",
     "release",
     "publish"
   ],
+  "author": "phinney",
+  "license": "ISC",
   "bin": {
     "release": "bin/release"
   },
-  "author": "phinney",
-  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/phinney001/front-end-release/issues"
+  },
+  "homepage": "https://github.com/phinney001/front-end-release#readme",
   "dependencies": {
     "ansi-colors": "^4.1.1",
     "compressing": "^1.5.1",
