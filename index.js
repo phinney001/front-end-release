@@ -27,7 +27,7 @@ class Build {
 
     // 打包命令
     this.buildOrder = this.config.buildOrder
-      || `node -max_old_space_size=4096 "${path.join(process.cwd(), './node_modules/umi/bin/umi.js')}" build`
+      || packageJson.dependencies.umi ?  `node -max_old_space_size=4096 "${path.join(process.cwd(), './node_modules/umi/bin/umi.js')}" build` : 'npm run build'
     
     // ftp服务
     this.client = new sftp()
